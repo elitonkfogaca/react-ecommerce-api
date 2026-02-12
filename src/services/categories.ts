@@ -2,6 +2,8 @@
 import { apiClient } from './api';
 import { Category } from './products';
 
+export type { Category };
+
 export interface CreateCategoryData {
   name: string;
   description?: string;
