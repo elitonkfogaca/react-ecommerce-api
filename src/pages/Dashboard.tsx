@@ -1,91 +1,258 @@
-import { useAuth } from '../hooks/useAuth';
-import { LogOut, Shield, CheckCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Layout } from '../components/Layout';
+import { authService, User } from '../services/auth';
+import { productService } from '../services/products';
+import { orderService } from '../services/orders';
+import { categoryService } from '../services/categories';
+import { 
+  Package, 
+  ShoppingCart, 
+  Tag, 
+  TrendingUp,
+  AlertCircle,
+  DollarSign,
+  Users,
+  RefreshCw,
+} from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export const Dashboard = () => {
-  const { logout } = useAuth();
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [stats, setStats] = useState({
+    totalProducts: 0,
+    totalOrders: 0,
+    totalCategories: 0,
+    pendingOrders: 0,
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      setIsLoading(true);
+      setError('');
+      
+      // Carrega o usuário primeiro
+      const userData = await authService.getCurrentUser();
+      setCurrentUser(userData);
+
+      // Tenta carregar os dados, mas não falha se der erro
+      try {
+        const [products, orders, categories] = await Promise.all([
+          productService.getProducts().catch(() => []),
+          orderService.getOrders().catch(() => []),
+          categoryService.getCategories().catch(() => []),
+        ]);
+
+        setStats({
+          totalProducts: products.length,
+          totalOrders: orders.length,
+          totalCategories: categories.length,
+          pendingOrders: orders.filter(o => o.status === 'pending').length,
+        });
+      } catch (statsErr) {
+        console.error('Error loading stats:', statsErr);
+        // Stats permanecem em 0, mas não exibe erro
+      }
+    } catch (err: any) {
+      console.error('Error loading user data:', err);
+      setError(err.response?.data?.detail || 'Failed to load user data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <Layout currentUser={currentUser || undefined}>
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      <nav className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-3">
-              <Shield className="w-8 h-8 text-blue-600" />
-              <h1 className="text-xl font-bold text-gray-900">Dashboard</h1>
+    <Layout currentUser={currentUser || undefined}>
+      <div className="space-y-6">
+        {/* Welcome Section */}
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Welcome back, {currentUser?.name || 'User'}! 👋
+          </h1>
+          <p className="text-gray-600 mt-1">
+            Here's what's happening with your e-commerce today
+          </p>
+        </div>
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm text-red-800">{error}</p>
+              <button
+                onClick={() => {
+                  setError('');
+                  loadData();
+                }}
+                className="text-sm text-red-600 hover:text-red-700 font-medium mt-2 flex items-center gap-1"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Try again
+              </button>
             </div>
-            <button
-              onClick={logout}
-              className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition"
+          </div>
+        )}
+
+        {/* Stats Grid */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Link to="/products" className="block">
+            <div className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition cursor-pointer">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <Package className="w-6 h-6 text-blue-600" />
+                </div>
+                <TrendingUp className="w-5 h-5 text-green-600" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-1">
+                {stats.totalProducts}
+              </h3>
+              <p className="text-gray-600 text-sm">Total Products</p>
+              {stats.totalProducts === 0 && (
+                <p className="text-xs text-gray-500 mt-1">Click to add products</p>
+              )}
+            </div>
+          </Link>
+
+          <Link to="/orders" className="block">
+            <div className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition cursor-pointer">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                  <ShoppingCart className="w-6 h-6 text-green-600" />
+                </div>
+                <TrendingUp className="w-5 h-5 text-green-600" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-1">
+                {stats.totalOrders}
+              </h3>
+              <p className="text-gray-600 text-sm">Total Orders</p>
+              {stats.totalOrders === 0 && (
+                <p className="text-xs text-gray-500 mt-1">No orders yet</p>
+              )}
+            </div>
+          </Link>
+
+          <Link to="/categories" className="block">
+            <div className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition cursor-pointer">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <Tag className="w-6 h-6 text-purple-600" />
+                </div>
+                <TrendingUp className="w-5 h-5 text-green-600" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-1">
+                {stats.totalCategories}
+              </h3>
+              <p className="text-gray-600 text-sm">Categories</p>
+              {stats.totalCategories === 0 && (
+                <p className="text-xs text-gray-500 mt-1">Click to add categories</p>
+              )}
+            </div>
+          </Link>
+
+          <Link to="/orders" className="block">
+            <div className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition cursor-pointer">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                  <DollarSign className="w-6 h-6 text-yellow-600" />
+                </div>
+                {stats.pendingOrders > 0 ? (
+                  <AlertCircle className="w-5 h-5 text-yellow-600" />
+                ) : (
+                  <TrendingUp className="w-5 h-5 text-green-600" />
+                )}
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-1">
+                {stats.pendingOrders}
+              </h3>
+              <p className="text-gray-600 text-sm">Pending Orders</p>
+              {stats.pendingOrders === 0 && (
+                <p className="text-xs text-gray-500 mt-1">All caught up!</p>
+              )}
+            </div>
+          </Link>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="bg-white rounded-xl shadow-md p-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Quick Actions</h2>
+          <div className="grid md:grid-cols-3 gap-4">
+            <Link
+              to="/products"
+              className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition"
             >
-              <LogOut className="w-5 h-5" />
-              <span className="font-medium">Logout</span>
-            </button>
-          </div>
-        </div>
-      </nav>
+              <Package className="w-5 h-5 text-blue-600" />
+              <div>
+                <h3 className="font-semibold text-gray-900">Manage Products</h3>
+                <p className="text-sm text-gray-600">Add or edit products</p>
+              </div>
+            </Link>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-              <CheckCircle className="w-6 h-6 text-green-600" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">Authentication Successful</h2>
-              <p className="text-gray-600">You are now logged in and viewing a protected route</p>
-            </div>
-          </div>
+            <Link
+              to="/orders"
+              className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:border-green-500 hover:bg-green-50 transition"
+            >
+              <ShoppingCart className="w-5 h-5 text-green-600" />
+              <div>
+                <h3 className="font-semibold text-gray-900">View Orders</h3>
+                <p className="text-sm text-gray-600">Process customer orders</p>
+              </div>
+            </Link>
 
-          <div className="border-t border-gray-200 pt-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Protected Content</h3>
-            <p className="text-gray-700 leading-relaxed mb-4">
-              This page is only accessible to authenticated users. Your JWT token is automatically
-              included in all API requests via the Authorization header.
-            </p>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm text-blue-900 font-medium mb-2">How it works:</p>
-              <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
-                <li>JWT token stored securely in localStorage</li>
-                <li>Axios interceptor adds Bearer token to requests</li>
-                <li>Protected routes redirect unauthenticated users</li>
-                <li>Token cleared on logout or 401 responses</li>
-              </ul>
-            </div>
+            <Link
+              to="/categories"
+              className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition"
+            >
+              <Tag className="w-5 h-5 text-purple-600" />
+              <div>
+                <h3 className="font-semibold text-gray-900">Categories</h3>
+                <p className="text-sm text-gray-600">Organize your catalog</p>
+              </div>
+            </Link>
           </div>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6">
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
-              <Shield className="w-6 h-6 text-blue-600" />
+        {/* User Info */}
+        {currentUser && (
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl shadow-md p-6 text-white">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                <Users className="w-8 h-8" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold">{currentUser.name}</h2>
+                <p className="text-blue-100">{currentUser.email}</p>
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="px-3 py-1 bg-white bg-opacity-20 rounded-full text-sm font-medium">
+                    {currentUser.role?.toUpperCase() || 'USER'}
+                  </span>
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    currentUser.is_active 
+                      ? 'bg-green-500 bg-opacity-80' 
+                      : 'bg-red-500 bg-opacity-80'
+                  }`}>
+                    {currentUser.is_active ? 'ACTIVE' : 'INACTIVE'}
+                  </span>
+                </div>
+              </div>
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Secure</h3>
-            <p className="text-gray-600 text-sm">
-              JWT-based authentication with secure token storage and automatic header injection
-            </p>
           </div>
-
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mb-4">
-              <CheckCircle className="w-6 h-6 text-green-600" />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Protected</h3>
-            <p className="text-gray-600 text-sm">
-              Route-level protection ensures only authenticated users can access sensitive areas
-            </p>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center mb-4">
-              <LogOut className="w-6 h-6 text-slate-600" />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Managed</h3>
-            <p className="text-gray-600 text-sm">
-              Clean logout flow with token cleanup and automatic redirection to login
-            </p>
-          </div>
-        </div>
-      </main>
-    </div>
+        )}
+      </div>
+    </Layout>
   );
 };
