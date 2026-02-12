@@ -1,0 +1,25 @@
+# Node
+node_modules
+npm-debug.log*
+
+# Build
+dist
+dist-ssr
+
+# Environment
+.env
+.env.local
+.env.production
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+.DS_Store
+
+# Docs
+README.md
+*.md

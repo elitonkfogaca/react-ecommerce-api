@@ -295,6 +295,39 @@ Configure no seu serviço de hosting:
 ```env
 VITE_API_BASE_URL=https://sua-api.com
 ```
+# 🐳 Docker - Frontend
+
+## Arquivos
+- `Dockerfile` - Build otimizado (Node + Nginx)
+- `docker-compose.yml` - Produção
+- `nginx.conf` - Configuração Nginx
+- `.dockerignore` - Arquivos ignorados
+
+## Uso
+
+### Produção
+```bash
+docker-compose up -d --build
+```
+http://localhost:3000
+
+### Comandos
+```bash
+# Ver logs
+docker-compose logs -f
+```
+
+```bash
+# Parar
+docker-compose down
+```
+
+## Variáveis de Ambiente
+
+Configure em `.env`:
+```env
+VITE_API_BASE_URL=http://localhost:8000
+```
 
 ### Plataformas Recomendadas
 
